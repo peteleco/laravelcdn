@@ -29,8 +29,8 @@ use Symfony\Component\Console\Output\ConsoleOutput;
  * @property string $cloudfront
  * @property string $cloudfront_url
  * @property string $http
- * @property string $awsHttps
- * @property string $awsHttpsUrl
+ * @property string $awshttps
+ * @property string $awshttps_url
  *
  * @author   Mahmoud Zalt <mahmoud@vinelab.com>
  */
@@ -59,6 +59,10 @@ class AwsS3Provider extends Provider implements ProviderInterface
                         'use'     => false,
                         'cdn_url' => null,
                     ],
+                    'awshttps'      => [
+                        'use'     => false,
+                        'cdn_url' => null,
+                    ]
                 ],
             ],
         ],
@@ -141,6 +145,8 @@ class AwsS3Provider extends Provider implements ProviderInterface
             'acl'            => $this->default['providers']['aws']['s3']['acl'],
             'cloudfront'     => $this->default['providers']['aws']['s3']['cloudfront']['use'],
             'cloudfront_url' => $this->default['providers']['aws']['s3']['cloudfront']['cdn_url'],
+            'awshttps'       => $this->default['providers']['aws']['s3']['awshttps']['use'],
+            'awshttps_url'   => $this->default['providers']['aws']['s3']['awshttps']['cdn_url'],
             'http'           => $this->default['providers']['aws']['s3']['http'],
             'upload_folder'  => $this->default['providers']['aws']['s3']['upload_folder']
         ];
@@ -409,21 +415,13 @@ class AwsS3Provider extends Provider implements ProviderInterface
     }
 
     /**
-     * @return string
-     */
-    public function getUrl()
-    {
-        return rtrim($this->provider_url, '/') . '/';
-    }
-
-    /**
      * Custom aws url with https
      *
      * @return boolean
      */
     public function getAwsHttps()
     {
-        if (! is_bool($awsSsl = $this->awsHttps)) {
+        if (! is_bool($awsSsl = $this->awshttps)) {
             return false;
         }
 
@@ -435,7 +433,15 @@ class AwsS3Provider extends Provider implements ProviderInterface
      */
     public function getAwsHttpsUrl()
     {
-        return rtrim($this->awsHttpsUrl, '/') . '/';
+        return rtrim($this->awshttps_url, '/') . '/';
+    }
+
+    /**
+     * @return string
+     */
+    public function getUrl()
+    {
+        return rtrim($this->provider_url, '/') . '/';
     }
 
     /**
