@@ -185,6 +185,8 @@ class AwsS3Provider extends Provider implements ProviderInterface
         // upload each asset file to the CDN
         if (count($assets) > 0) {
             $this->console->writeln('<fg=yellow>Upload in progress......</fg=yellow>');
+            $finfo           = finfo_open(FILEINFO_MIME_TYPE);
+            $compressedFiles = [];
             foreach ($assets as $file) {
                 try {
                     $this->console->writeln('<fg=cyan>' . 'Uploading file path: ' . $file->getRealpath() . '</fg=cyan>');
@@ -205,20 +207,20 @@ class AwsS3Provider extends Provider implements ProviderInterface
                     ];
 
                     $ext = pathinfo($file->getRealPath(), PATHINFO_EXTENSION);
-                    if(in_array('.' . $ext, $this->configurations['compress'])) {
-                        $filePath = $this->gzipFile($file);
-                        $compressedFiles[] = $filePath;
+
+                    if (in_array($ext, $this->configurations['compress'])) {
+
+                        $filePath                   = $this->gzipFile($file);
+                        $compressedFiles[]          = $filePath;
                         $options['ContentEncoding'] = 'gzip';
-                        $options['Body'] = fopen($filePath, 'r');
-                        $options['ContentType'] = $this->getMimeType($file);
+                        $options['Body']            = fopen($filePath, 'r');
+                        $options['ContentType']     = $this->getMimeType($file);
                     } else {
-                        $filePath = $file->getRealPath();
+                        $filePath        = $file->getRealPath();
                         $options['Body'] = fopen($filePath, 'r');
                     }
 
                     $command = $this->s3_client->getCommand('putObject', $options);
-//                var_dump(get_class($command));exit();
-
 
                     $this->s3_client->execute($command);
                 } catch (S3Exception $e) {
@@ -230,6 +232,7 @@ class AwsS3Provider extends Provider implements ProviderInterface
 
             // user terminal message
             $this->console->writeln('<fg=green>Upload completed successfully.</fg=green>');
+            array_map('unlink', $compressedFiles);
         } else {
             // user terminal message
             $this->console->writeln('<fg=yellow>No new files to upload.</fg=yellow>');
