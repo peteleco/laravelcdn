@@ -117,6 +117,7 @@ class CdnTest extends TestCase
                 'patterns'    => [],
                 'hidden'      => true,
             ],
+            'compress' => []
         ];
 
         $m_consol = M::mock('Symfony\Component\Console\Output\ConsoleOutput');

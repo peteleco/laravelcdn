@@ -125,6 +125,7 @@ class AwsS3ProviderTest extends TestCase
                     ],
                 ],
             ],
+            'compress' => []
         ];
 
         $this->p_awsS3Provider->init($configurations);

@@ -156,6 +156,8 @@ class AwsS3Provider extends Provider implements ProviderInterface
 
         $this->supplier = $supplier;
 
+        $this->configurations = $configurations;
+
         return $this;
     }
 
@@ -186,21 +188,35 @@ class AwsS3Provider extends Provider implements ProviderInterface
             foreach ($assets as $file) {
                 try {
                     $this->console->writeln('<fg=cyan>' . 'Uploading file path: ' . $file->getRealpath() . '</fg=cyan>');
-                    $command = $this->s3_client->getCommand('putObject', [
 
+                    $options = [
                         // the bucket name
-                        'Bucket' => $this->getBucket(),
+                        'Bucket'       => $this->getBucket(),
                         // the path of the file on the server (CDN)
-                        'Key'    => $this->supplier['upload_folder'] . str_replace('\\', '/', $file->getPathName()),
+                        'Key'          => $this->supplier['upload_folder'] . str_replace('\\', '/',
+                                $file->getPathName()),
                         // the path of the path locally
-                        'Body'   => fopen($file->getRealPath(), 'r'),
+                        'Body'         => fopen($file->getRealPath(), 'r'),
                         // the permission of the file
-
                         'ACL'          => $this->acl,
                         'CacheControl' => $this->default['providers']['aws']['s3']['cache-control'],
                         'Metadata'     => $this->default['providers']['aws']['s3']['metadata'],
                         'Expires'      => $this->default['providers']['aws']['s3']['expires'],
-                    ]);
+                    ];
+
+                    $ext = pathinfo($file->getRealPath(), PATHINFO_EXTENSION);
+                    if(in_array('.' . $ext, $this->configurations['compress'])) {
+                        $filePath = $this->gzipFile($file);
+                        $compressedFiles[] = $filePath;
+                        $options['ContentEncoding'] = 'gzip';
+                        $options['Body'] = fopen($filePath, 'r');
+                        $options['ContentType'] = $this->getMimeType($file);
+                    } else {
+                        $filePath = $file->getRealPath();
+                        $options['Body'] = fopen($filePath, 'r');
+                    }
+
+                    $command = $this->s3_client->getCommand('putObject', $options);
 //                var_dump(get_class($command));exit();
 
 
@@ -452,5 +468,46 @@ class AwsS3Provider extends Provider implements ProviderInterface
     public function __get($attr)
     {
         return isset($this->supplier[$attr]) ? $this->supplier[$attr] : null;
+    }
+
+    /**
+     * Compress file
+     *
+     * @param $file
+     *
+     * @return string
+     */
+    protected function gzipFile($file, $mode = 'wb')
+    {
+        $gzFile = $file->getRealPath() . '.gz';
+        $gz     = gzopen($gzFile, $mode);
+        gzwrite($gz, file_get_contents($file->getRealPath()));
+        gzclose($gz);
+
+        return $gzFile;
+    }
+
+    /**
+     * Get mimetype of file
+     *
+     * @param $file
+     *
+     * @return string
+     */
+    protected function getMimeType($file)
+    {
+        $info      = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType  = finfo_file($info, $file->getRealPath());
+        $extension = pathinfo($file->getRealPath(), PATHINFO_EXTENSION);
+        switch ($extension) {
+            case 'css':
+                $mimeType = 'text/css';
+                break;
+            case 'js':
+                $mimeType = 'application/javascript';
+                break;
+        }
+
+        return $mimeType;
     }
 }
